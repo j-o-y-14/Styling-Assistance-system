@@ -1,5 +1,6 @@
 STYLING ASSISTANCE SYSTEM.
 Problem solved.
+
 Time & stress by simplifying choices.
 
 Confidence issues by promoting flattering outfits.
@@ -12,6 +13,7 @@ Authenticity gap by combining fit with style identity.
 
 
 Benefits
+
 . Enhances Personal Style and Confidence
 
 . Promotes Body Positivity and Self-Acceptance
@@ -22,6 +24,7 @@ Benefits
 
 
 Core Features
+
 User profile and body type detecytion
 
 Virtual outfit and wardrobe builder
