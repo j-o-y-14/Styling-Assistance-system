@@ -35,7 +35,7 @@ Functions.
 
 File handling.(.csv or .jason)
 
-External API.( OpenWeatherMap API to get :Temperature ,Weather condition (e.g., rainy, sunny, cloudy)
+External API.(OpenWeatherMap API to get :Temperature ,Weather condition (e.g., rainy, sunny, cloudy)
 
 Simple GUI( Tkinter )
 
