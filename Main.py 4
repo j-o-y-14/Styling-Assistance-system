@@ -1,12 +1,9 @@
-# styling_assistant.py
+#styling_assistant.py
 
 from dataclasses import dataclass
 import requests
 import csv
 from typing import Dict
-import tkinter as tk
-from tkinter import ttk, messagebox
-
 
 # --- Data Models ---
 @dataclass
@@ -136,116 +133,33 @@ def save_outfit_to_csv(filename: str, outfit: Dict):
 # --- Weather Fetch ---
 def fetch_weather(api_key: str, city: str) -> tuple:
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&appid={api_key}"
-    api_key = "f64e441abf6085898180f8f8baf17f74"
+    api_key = "4e441abf6085898180f8f8baf17f74f6"
     r = requests.get(url).json()
     return r['main']['temp'], r['weather'][0]['main']
 
-
-def on_submit(bust, waist, hips, highhip, tone, occasion, city, api_key, result_text):
-    # Validate measurements
-    try:
-        m = Measurements(float(bust), float(waist), float(hips),
-                         float(highhip) if highhip.strip() else None)
-    except ValueError:
-        messagebox.showerror("Input Error", "Please enter valid numbers for measurements.")
-        return
-
-    if tone not in ("Warm", "Cool", "Neutral"):
-        messagebox.showerror("Input Error", "Skin tone must be Warm, Cool, or Neutral.")
-        return
-
-    # Build profile
+# --- CLI Demo ---
+if __name__ == "__main__":
+    m = Measurements(bust=37, waist=29, hips=40, high_hip=38)
     profile = Profile(
         size_category=classify_body_size(m),
         body_shape=classify_body_shape(m),
-        undertone=tone
+        undertone='Neutral'  # Example
     )
 
-    # Fetch weather
-    try:
-        temp, cond = fetch_weather(api_key, city)
-    except Exception as e:
-        messagebox.showerror("Weather Error", f"Could not fetch weather: {e}")
-        return
+    occasion = "Cocktail Party"
 
-    temp = round(temp)
-    weather_rec = dress_for_weather(temp, cond)
-
-    # Compute recommendations
-    size_colors = color_suggestions_by_size(profile.size_category)
-    tone_colors = color_palette_for_undertone(profile.undertone)
-    print_tips = print_recommendations(profile.body_shape)
-    occasion_rec = dress_for_occasion(occasion)
-
-    # Display results
-    lines = [
-        f"Size: {profile.size_category}",
-        f"Body Shape: {profile.body_shape}",
-        f"Undertone: {profile.undertone}",
-        f"Occasion: {occasion}",
-        f"Weather in {city}: {temp}°C, {cond}\n",
-        "Color by Body Size:", *size_colors.values(),
-        "Color by Skin Tone:", *tone_colors.values(),
-        "Print tips:", *print_tips.values(),
-        "Occasion pick:", *occasion_rec.values(),
-        "Weather-specific picks:", *weather_rec.values()
-    ]
-    result_text.delete("1.0", tk.END)
-    result_text.insert(tk.END, "\n".join(lines))
-
-    # Save to CSV
+    # Build outfit summary
     outfit = {
         "Size": profile.size_category,
         "Shape": profile.body_shape,
         "Undertone": profile.undertone,
         "Occasion": occasion,
-        "City": city,
-        "Temp": temp, "Weather": cond,
-        "SizeColors": "; ".join(size_colors.values()),
-        "ToneColors": "; ".join(tone_colors.values()),
-        "PrintTips": "; ".join(print_tips.values()),
-        "OccasionTips": "; ".join(occasion_rec.values()),
-        "WeatherTips": "; ".join(weather_rec.values())
+        "SizeColors": '; '.join(color_suggestions_by_size(profile.size_category).values()),
+        "SkinToneColors": '; '.join(color_palette_for_undertone(profile.undertone).values()),
+        "PrintTips": '; '.join(print_recommendations(profile.body_shape).values())
     }
-    save_outfit_to_csv("saved_outfits.csv", outfit)
-    messagebox.showinfo("Success", "Recommendations saved to CSV.")
 
+    # Save outfit
+    save_outfit_to_csv("saved_outfits.csv", outfit)  # Uses DictWriter append logic :contentReference[oaicite:1]{index=1}
 
-def run_app():    
-    root = tk.Tk()
-    root.title("Styling Assistant")
-    root.geometry("600x400")
-
-    frame = ttk.Frame(root, padding=10)
-    frame.pack(fill="both", expand=True)
-
-    labels = ["Bust (in)", "Waist (in)", "Hips (in)", "High-hip (optional)",
-              "Skin Tone", "Occasion", "City (Weather)", "API Key"]
-    vars_ = [tk.StringVar() for _ in labels]
-
-    for i, text in enumerate(labels):
-        ttk.Label(frame, text=text + ":").grid(row=i, column=0, sticky="E", pady=5, padx=5)
-        if text == "Skin Tone":
-            ttk.Combobox(frame, textvariable=vars_[i],
-                         values=["Warm", "Cool", "Neutral"], state="readonly"
-            ).grid(row=i, column=1, sticky="WE")
-        else:
-            show = "*" if text == "API Key" else ""
-            ttk.Entry(frame, textvariable=vars_[i], show=show).grid(row=i, column=1, sticky="WE")
-
-    result_text = tk.Text(frame, height=15, wrap="word")
-    result_text.grid(row=len(labels)+1, column=0, columnspan=2, sticky="WE", pady=5)
-
-    submit_btn = ttk.Button(
-        frame, text="Submit",
-        command=lambda: on_submit(
-            *(v.get() for v in vars_), result_text
-        )
-    )
-    submit_btn.grid(row=len(labels), column=0, columnspan=2, sticky="WE", pady=10)
-
-    frame.grid_columnconfigure(1, weight=1)
-    root.mainloop()
-
-if __name__ == "__main__":
-    run_app()
+    print("Outfit saved to saved_outfits.csv!")

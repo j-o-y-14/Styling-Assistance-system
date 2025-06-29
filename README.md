@@ -16,13 +16,11 @@ Benefits
 
 Core Features
 
-.User profile and body type detection
-
-.Virtual outfit and wardrobe builder
+.Body type detection
 
 .Personalised outfit recommendations.
 
-.Save favorites or rate outfits
+.Save favorite outfits.
 
 
 Planned features
