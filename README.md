@@ -16,18 +16,18 @@ Benefits
 
 Core Features
 
-User profile and body type detection
+.User profile and body type detection
 
-Virtual outfit and wardrobe builder
+.Virtual outfit and wardrobe builder
 
-Personalised outfit recommendations.
+.Personalised outfit recommendations.
 
- Save favorites or rate outfits
+.Save favorites or rate outfits
 
 
 Planned features
 
-User input (Body size:small,medium large, Preferred colour)
+
 
 Loops and conditionals.
 
@@ -35,7 +35,7 @@ Functions.
 
 File handling.(.csv or .jason)
 
-External API.(OpenWeatherMap API to get :Temperature ,Weather condition (e.g., rainy, sunny, cloudy)
+External API.( OpenWeatherMap API to get :Temperature ,Weather condition (e.g., rainy, sunny, cloudy)
 
 Simple GUI( Tkinter )
 
