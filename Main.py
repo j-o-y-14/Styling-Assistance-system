@@ -1,251 +1,161 @@
-# styling_assistant.py
-
+import streamlit as st
 from dataclasses import dataclass
 import requests
-import csv
-from typing import Dict
-import tkinter as tk
-from tkinter import ttk, messagebox
+import openai
 
+DEFAULT_API_KEY = "4e441abf6085898180f8f8baf17f74f6"
+OPENAI_API_KEY = "your-openai-api-key"
+openai.api_key = OPENAI_API_KEY
 
-# --- Data Models ---
 @dataclass
 class Measurements:
-    bust: float        # inches
-    waist: float       # inches
-    hips: float        # inches
-    high_hip: float = None  # optional
+    bust: float
+    waist: float
+    hips: float
+    high_hip: float = None
 
-@dataclass
-class Profile:
-    size_category: str
-    body_shape: str
-    undertone: str = None  # 'Warm', 'Cool', 'Neutral'
+def cm_to_inches(cm: float) -> float:
+    return cm / 2.54
 
-# --- Body Size Classification ---
 def classify_body_size(m: Measurements) -> str:
-    b, w, h = m.bust, m.waist, m.hips
-    if 33.5 <= b <= 34.5 and 25 <= w <= 26 and 36 <= h <= 37:
+    avg = (m.bust + m.waist + m.hips) / 3
+    if avg < 36:
         return "Small"
-    elif 35.5 <= b <= 37.5 and 27 <= w <= 28 and 38 <= h <= 39:
+    elif avg < 40:
         return "Medium"
-    elif 38 <= b <= 39.5 and 29.5 <= w <= 31 and 40.5 <= h <= 42:
+    else:
         return "Large"
-    avg = (b + w + h) / 3
-    return "Small" if avg < 36 else "Medium" if avg < 40 else "Large"
 
-# --- Body Shape Classification ---
 def classify_body_shape(m: Measurements) -> str:
-    b, w, h, hh = m.bust, m.waist, m.hips, m.high_hip
+    b, w, h = m.bust, m.waist, m.hips
     if abs(b - h) <= 1 and (b - w >= 9 or h - w >= 10):
         return "Hourglass"
-    if hh and h - b >= 3.6 and h - w < 9:
+    elif h - b >= 3.6 and h - w < 9:
         return "Pear"
-    if abs(b - h) < 3.6 and b - w < 9 and h - w < 10:
-        return "Rectangle"
-    if b - h >= 3.6 and b - w < 9:
+    elif b - h >= 3.6 and b - w < 9:
         return "Inverted Triangle"
-    return "Undefined"
+    elif abs(b - h) < 3.6 and b - w < 9 and h - w < 10:
+        return "Rectangle"
+    else:
+        return "Undefined"
 
-# --- Color by Body Size Guidance ---
-def color_suggestions_by_size(size: str) -> dict:
-    rec = {}
-    if size == "Large":
-        rec['Large Body Size'] = (
-            "Dark colors (black, navy, deep greens) create a slimming silhouette."
-        )
-    elif size == "Small":
-        rec['Small Body Size'] = (
-            "Light, bright colors (whites, pastels, vibrant hues) add presence."
-        )
-    elif size == "Medium":
-        rec['Medium Body Size'] = (
-            "Balanced tones maintain natural proportions."
-        )
-    return rec
+def print_recommendations(shape: str) -> str:
+    return {
+        "Hourglass": "Fitted styles that emphasize the waist",
+        "Pear": "Bold tops and A-line skirts",
+        "Rectangle": "Add curves with belts and layers",
+        "Inverted Triangle": "Simple tops with detailed bottoms"
+    }.get(shape, "Experiment with patterns and balance.")
 
-# --- Skin Tone Guidance ---
-def color_palette_for_undertone(undertone: str) -> dict:
-    rec = {}
-    if undertone == 'Warm':
-        rec['Warm Undertones'] = "Coral, peach, golden yellow, olive green."
-    elif undertone == 'Cool':
-        rec['Cool Undertones'] = "Emerald green, ruby red, sapphire blue."
-    elif undertone == 'Neutral':
-        rec['Neutral Undertones'] = "Dusty pink, jade, taupe, creamy neutrals."
-    return rec
+def fetch_weather(city: str) -> tuple:
+    try:
+        r = requests.get(f"http://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&appid={DEFAULT_API_KEY}").json()
+        return r["main"]["temp"], r["weather"][0]["main"]
+    except:
+        return None, None
 
-# --- Shape-Specific Print Tips ---
-def print_recommendations(shape: str) -> dict:
-    rec = {}
-    if shape == 'Pear':
-        rec['Pear Shape'] = "Bold prints on top; solids or small/vertical prints below."
-    elif shape == 'Hourglass':
-        rec['Hourglass Shape'] = "Waist-accentuating prints; avoid boxy cuts."
-    elif shape == 'Rectangle':
-        rec['Rectangle Shape'] = "Adds curves with prints or ruffles at bust & hips."
-    elif shape == 'Inverted Triangle':
-        rec['Inverted Triangle'] = "Keep upper simple; prints on lower body."
-    rec['Universal'] = "Monochromatic prints are slimming and versatile."
-    return rec
-
-# --- Weather-Based Dressing ---
-def dress_for_weather(temp_c: float, cond: str) -> dict:
-    rec = {}
-    # guidance omitted for brevity; same as before
+def dress_for_weather(temp_c: float, cond: str) -> str:
+    rec = []
+    if temp_c >= 25:
+        rec.append("Light fabrics + sun care.")
+    elif temp_c >= 15:
+        rec.append("Cotton layers.")
+    elif temp_c >= 5:
+        rec.append("Sweaters + jacket.")
+    else:
+        rec.append("Coats & thermals.")
     lc = cond.lower()
-    if 'rain' in lc:
-        rec['Rain Gear'] = "Waterproof jacket and water‑resistant footwear."
-    if 'snow' in lc or 'wind' in lc:
-        rec['Protection'] = "Windproof layers, cover extremities."
-    if temp_c >= 25 and 'sun' in lc:
-        rec['Sun Care'] = "Hat, sunglasses, sunscreen."
-    return rec
+    if "rain" in lc:
+        rec.append("Waterproof jacket.")
+    if "snow" in lc or "wind" in lc:
+        rec.append("Cover extremities.")
+    return "; ".join(rec)
 
-# --- Occasion-Based Dressing ---
-def dress_for_occasion(occasion: str) -> dict:
-    rec = {}
-    oc = occasion.lower()
-    if  'gala' in oc :
-        rec['Formal'] = "Gowns, cocktail dresses, elegant suits."
-    if 'business formal' in oc:
-        rec['Business Formal'] = "Tailored suit, dress pants/skirts, blouses."
-    if 'semi-formal' in oc:
-        rec['Semi‑Formal'] = "Cocktail dress or stylish jumpsuit; add blazer."
-    if 'casual' in oc and 'business' in oc:
-        rec['Business Casual'] = "Chinos + button-down or blazer + jeans."
-    elif 'casual' in oc:
-        rec['Casual'] = "Jeans, comfortable dresses; functional for outdoors."
-    return rec
+def dress_for_occasion(oc: str) -> str:
+    o = oc.lower()
+    if "black-tie" in o:
+        return "Elegant gown or formal suit."
+    if "cocktail" in o:
+        return "Dress or jumpsuit with heels."
+    if "dressy casual" in o:
+        return "Smart top and tailored pants."
+    return "Comfy casual outfit."
 
-# --- Save Outfit to CSV ---
-def save_outfit_to_csv(filename: str, outfit: Dict):
-    file_exists = False
-    try:
-        with open(filename, 'r', newline='') as f:
-            file_exists = True
-    except FileNotFoundError:
-        pass
-
-    with open(filename, 'a', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=outfit.keys())
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(outfit)
-
-# --- Weather Fetch ---
-def fetch_weather(api_key: str, city: str) -> tuple:
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&appid={api_key}"
-    api_key = "4e441abf6085898180f8f8baf17f74f6"
-    r = requests.get(url).json()
-    return r['main']['temp'], r['weather'][0]['main']
-
-
-def on_submit(bust, waist, hips, highhip, tone, occasion, city, api_key, result_text):
-    # Validate measurements
-    try:
-        m = Measurements(float(bust), float(waist), float(hips),
-                         float(highhip) if highhip.strip() else None)
-    except ValueError:
-        messagebox.showerror("Input Error", "Please enter valid numbers for measurements.")
-        return
-
-    if tone not in ("Warm", "Cool", "Neutral"):
-        messagebox.showerror("Input Error", "Skin tone must be Warm, Cool, or Neutral.")
-        return
-
-    # Build profile
-    profile = Profile(
-        size_category=classify_body_size(m),
-        body_shape=classify_body_shape(m),
-        undertone=tone
+def generate_outfit_suggestion(size, shape, occasion, weather, temp):
+    prompt = f"""Suggest an outfit for a person with a {shape} body shape and {size} body size. The occasion is {occasion}, and the weather is {weather} with {temp}°C."""
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7
     )
+    return response.choices[0].message['content']
 
-    # Fetch weather
-    try:
-        temp, cond = fetch_weather(api_key, city)
-    except Exception as e:
-        messagebox.showerror("Weather Error", f"Could not fetch weather: {e}")
-        return
+st.set_page_config(page_title="Styling Assistant", layout="centered")
+st.markdown("""
+    <style>
+        .main {
+            background-color: #faf3f3;
+            padding: 2rem;
+            border-radius: 20px;
+        }
+        h1, h2, h3 {
+            color: #dc6c85;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-    temp = round(temp)
-    weather_rec = dress_for_weather(temp, cond)
+st.title("👗 Welcome to Your Styling Assistant")
+st.subheader("✨ Personalize Your Style with Confidence")
+st.write("Enter your body measurements to get personalized fashion advice!")
 
-    # Compute recommendations
-    size_colors = color_suggestions_by_size(profile.size_category)
-    tone_colors = color_palette_for_undertone(profile.undertone)
-    print_tips = print_recommendations(profile.body_shape)
-    occasion_rec = dress_for_occasion(occasion)
+st.image("body_shapes.png", caption="Body Shape Types", use_container_width=True)
 
-    # Display results
-    lines = [
-        f"Size: {profile.size_category}",
-        f"Body Shape: {profile.body_shape}",
-        f"Undertone: {profile.undertone}",
-        f"Occasion: {occasion}",
-        f"Weather in {city}: {temp}°C, {cond}\n",
-        "Color by Body Size:", *size_colors.values(),
-        "Color by Skin Tone:", *tone_colors.values(),
-        "Print tips:", *print_tips.values(),
-        "Occasion pick:", *occasion_rec.values(),
-        "Weather-specific picks:", *weather_rec.values()
-    ]
-    result_text.delete("1.0", tk.END)
-    result_text.insert(tk.END, "\n".join(lines))
+st.markdown("---")
 
-    # Save to CSV
-    outfit = {
-        "Size": profile.size_category,
-        "Shape": profile.body_shape,
-        "Undertone": profile.undertone,
-        "Occasion": occasion,
-        "City": city,
-        "Temp": temp, "Weather": cond,
-        "SizeColors": "; ".join(size_colors.values()),
-        "ToneColors": "; ".join(tone_colors.values()),
-        "PrintTips": "; ".join(print_tips.values()),
-        "OccasionTips": "; ".join(occasion_rec.values()),
-        "WeatherTips": "; ".join(weather_rec.values())
-    }
-    save_outfit_to_csv("saved_outfits.csv", outfit)
-    messagebox.showinfo("Success", "Recommendations saved to CSV.")
+with st.form("measurement_form"):
+    st.subheader("📏 Input Your Measurements")
+    unit = st.radio("Choose unit", ["in", "cm"])
+    bust = st.number_input("Bust", min_value=0.0)
+    waist = st.number_input("Waist", min_value=0.0)
+    hips = st.number_input("Hips", min_value=0.0)
+    high_hip = st.number_input("High Hip (optional)", min_value=0.0, value=0.0)
+    submitted = st.form_submit_button("Submit Measurements")
 
+if submitted:
+    if unit == "cm":
+        bust = cm_to_inches(bust)
+        waist = cm_to_inches(waist)
+        hips = cm_to_inches(hips)
+        high_hip = cm_to_inches(high_hip)
+    else:
+        high_hip = high_hip if high_hip != 0 else None
+    m = Measurements(bust, waist, hips, high_hip)
+    size = classify_body_size(m)
+    shape = classify_body_shape(m)
+    tip = print_recommendations(shape)
 
-def run_app():    
-    root = tk.Tk()
-    root.title("Styling Assistant")
-    root.geometry("600x400")
+    st.markdown("---")
+    st.subheader("📊 Your Results")
+    st.success(f"Body Size: {size}\n\nBody Shape: {shape}")
+    st.info(f"💡 Style Tip: {tip}")
 
-    frame = ttk.Frame(root, padding=10)
-    frame.pack(fill="both", expand=True)
+    st.image("outfit_ideas.png", caption="Outfit Ideas for Your Shape", use_container_width=True)
 
-    labels = ["Bust (in)", "Waist (in)", "Hips (in)", "High-hip (optional)",
-              "Skin Tone", "Occasion", "City ", "API Key"]
-    vars_ = [tk.StringVar() for _ in labels]
+    st.markdown("---")
+    with st.expander("🌦️ Get Advice for Weather and Occasion"):
+        city = st.text_input("Enter your city")
+        occasion = st.selectbox("Select Occasion", ["Black-tie", "Cocktail", "Dressy Casual", "Casual"])
+        if st.button("Get Advice"):
+            temp, cond = fetch_weather(city)
+            if temp is not None:
+                st.write(f"Weather in {city}: {temp}°C, {cond}")
+                st.write(f"🌤️ Weather Tip: {dress_for_weather(temp, cond)}")
+                st.write(f"🌟 Occasion Tip: {dress_for_occasion(occasion)}")
+                suggestion = generate_outfit_suggestion(size, shape, occasion, cond, temp)
+                st.markdown(f"🧐 **AI Suggestion:** {suggestion}")
+            else:
+                st.error("❌ Could not fetch weather. Check city name.")
 
-    for i, text in enumerate(labels):
-        ttk.Label(frame, text=text + ":").grid(row=i, column=0, sticky="E", pady=5, padx=5)
-        if text == "Skin Tone":
-            ttk.Combobox(frame, textvariable=vars_[i],
-                         values=["Warm", "Cool", "Neutral"], state="readonly"
-            ).grid(row=i, column=1, sticky="WE")
-        else:
-            show = "*" if text == "API Key" else ""
-            ttk.Entry(frame, textvariable=vars_[i], show=show).grid(row=i, column=1, sticky="WE")
+    st.markdown("---")
+    st.download_button("📅 Download My Tips", data=f"Body Size: {size}\nBody Shape: {shape}\n\nTip: {tip}", file_name="styling_tips.txt")
 
-    result_text = tk.Text(frame, height=15, wrap="word")
-    result_text.grid(row=len(labels)+1, column=0, columnspan=2, sticky="WE", pady=5)
-
-    submit_btn = ttk.Button(
-        frame, text="Submit",
-        command=lambda: on_submit(
-            *(v.get() for v in vars_), result_text
-        )
-    )
-    submit_btn.grid(row=len(labels), column=0, columnspan=2, sticky="WE", pady=10)
-
-    frame.grid_columnconfigure(1, weight=1)
-    root.mainloop()
-
-if __name__ == "__main__":
-    run_app()
