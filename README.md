@@ -37,7 +37,10 @@ Data management
 
 
 ## Challenges faced:
-_Implementing the GUI tikinter
+Implementing the GUI tikinter
+
+Adding vuisual outfit ideas 
+
 
 ---
 
