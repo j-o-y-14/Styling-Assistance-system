@@ -1,0 +1,210 @@
+# styling_assistant.py
+
+from dataclasses import dataclass
+import requests
+import csv
+from typing import Dict
+
+# --- Data Models ---
+@dataclass
+class Measurements:
+    bust: float        # inches
+    waist: float       # inches
+    hips: float        # inches
+    high_hip: float = None  # optional
+
+@dataclass
+class Profile:
+    size_category: str
+    body_shape: str
+    undertone: str = None  # 'Warm', 'Cool', 'Neutral'
+
+# --- Classification & Recommendations ---
+def classify_body_size(m: Measurements) -> str:
+    b, w, h = m.bust, m.waist, m.hips
+    if 33.5 <= b <= 34.5 and 25 <= w <= 26 and 36 <= h <= 37:
+        return "Small"
+    elif 35.5 <= b <= 37.5 and 27 <= w <= 28 and 38 <= h <= 39:
+        return "Medium"
+    elif 38 <= b <= 39.5 and 29.5 <= w <= 31 and 40.5 <= h <= 42:
+        return "Large"
+    avg = (b + w + h) / 3
+    return "Small" if avg < 36 else "Medium" if avg < 40 else "Large"
+
+def classify_body_shape(m: Measurements) -> str:
+    b, w, h, hh = m.bust, m.waist, m.hips, m.high_hip
+    if abs(b - h) <= 1 and (b - w >= 9 or h - w >= 10):
+        return "Hourglass"
+    if hh and h - b >= 3.6 and h - w < 9:
+        return "Pear"
+    if abs(b - h) < 3.6 and b - w < 9 and h - w < 10:
+        return "Rectangle"
+    if b - h >= 3.6 and b - w < 9:
+        return "Inverted Triangle"
+    return "Undefined"
+
+def color_suggestions_by_size(size: str) -> dict:
+    rec = {}
+    if size == "Large":
+        rec['Large Body Size'] = "Dark colors (black, navy, deep greens)."
+    elif size == "Small":
+        rec['Small Body Size'] = "Light, bright colors (whites, pastels, vibrant hues)."
+    elif size == "Medium":
+        rec['Medium Body Size'] = "Balanced tones maintain natural proportions."
+    return rec
+
+def color_palette_for_undertone(undertone: str) -> dict:
+    rec = {}
+    if undertone == 'Warm':
+        rec['Warm Undertones'] = "Coral, peach, golden yellow, olive green."
+    elif undertone == 'Cool':
+        rec['Cool Undertones'] = "Emerald green, ruby red, sapphire blue."
+    elif undertone == 'Neutral':
+        rec['Neutral Undertones'] = "Dusty pink, jade, taupe, creamy neutrals."
+    return rec
+
+def print_recommendations(shape: str) -> dict:
+    rec = {}
+    if shape == 'Pear':
+        rec['Pear Shape'] = "Bold prints on top; solids or small/vertical prints below."
+    elif shape == 'Hourglass':
+        rec['Hourglass Shape'] = "Waist-accentuating prints."
+    elif shape == 'Rectangle':
+        rec['Rectangle Shape'] = "Adds curves with prints or ruffles at bust & hips."
+    elif shape == 'Inverted Triangle':
+        rec['Inverted Triangle'] = "Keep upper simple; prints on lower body."
+    rec['Universal'] = "Monochromatic prints are slimming and versatile."
+    return rec
+
+def dress_for_occasion(occasion: str) -> dict:
+    rec = {}
+    oc = occasion.lower()
+    if 'gala' in oc:
+        rec['Formal'] = "Gowns, cocktail dresses, elegant suits."
+    if 'business formal' in oc:
+        rec['Business Formal'] = "Tailored suit, dress pants/skirts, blouses."
+    if 'cocktail' in oc or 'semi-formal' in oc:
+        rec['Semi‑Formal'] = "Cocktail dress or stylish jumpsuit; add blazer."
+    if 'casual' in oc and 'business' in oc:
+        rec['Business Casual'] = "Chinos + button-down or blazer + jeans."
+    elif 'casual' in oc:
+        rec['Casual'] = "Jeans, comfortable dresses; functional for outdoors."
+    return rec
+
+# --- Weather Integration ---
+def fetch_weather(api_key: str, city: str) -> tuple:
+    api_key = "4e441abf6085898180f8f8baf17f74f6"
+    url = f"https://api.openweathermap.org/data/2.5/weather"
+    params = {"q": city, "units": "metric", "appid": api_key}
+    resp = requests.get(url, params=params).json()
+    return resp['main']['temp'], resp['weather'][0]['main']
+
+def dress_for_weather(temp_c: float, cond: str) -> dict:
+    rec = {}
+    if temp_c >= 30:
+        rec['Fabrics'] = "Light cotton/linen; avoid synthetics."
+        rec['Styles'] = "Short sleeves, flowy outfits."
+    elif temp_c >= 20:
+        rec['Fabrics'] = "Cotton, jersey; layer lightly."
+        rec['Styles'] = "T-shirt + light jacket; sneakers."
+    elif temp_c >= 10:
+        rec['Fabrics'] = "Light wool; layer sweaters."
+        rec['Styles'] = "Mid-weight layers; scarf/beanie."
+    elif temp_c >= 0:
+        rec['Fabrics'] = "Wool, fleece; thermal layers."
+        rec['Styles'] = "Parka, boots, gloves."
+    else:
+        rec['Fabrics'] = "Down/synthetic insulation; waterproof shell."
+        rec['Styles'] = "Full winter gear, mittens, gaiter."
+    lc = cond.lower()
+    if 'rain' in lc:
+        rec['Rain Gear'] = "Waterproof jacket and water-resistant footwear."
+    if 'snow' in lc or 'wind' in lc:
+        rec['Protection'] = "Windproof layers; cover extremities."
+    if temp_c >= 25 and 'sun' in lc:
+        rec['Sun Care'] = "Hat, sunglasses, sunscreen."
+    return rec
+
+# --- CSV Saving ---
+def save_outfit_to_csv(filename: str, outfit: Dict):
+    exists = False
+    try:
+        with open(filename, newline=''): exists = True
+    except FileNotFoundError:
+        pass
+    with open(filename, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=outfit.keys())
+        if not exists:
+            writer.writeheader()
+        writer.writerow(outfit)
+
+# --- Interactive Prompt ---
+def run_interactive():
+    print("Styling Assistant Setup:\n")
+    bust = float(input("Bust (inches): "))
+    waist = float(input("Waist (inches): "))
+    hips = float(input("Hips (inches): "))
+    high = input("High hip (optional): ")
+    m = Measurements(bust, waist, hips, float(high) if high.strip() else None)
+
+    undertone = input("Skin undertone (Warm/Cool/Neutral): ").title()
+    occasion = input("Occasion (e.g., Wedding, Casual): ")
+    city = input("City for weather lookup: ")
+    api_key = input("Your OpenWeatherMap API key: ")
+
+    profile = Profile(
+        size_category=classify_body_size(m),
+        body_shape=classify_body_shape(m),
+        undertone=undertone
+    )
+
+    temp, cond = fetch_weather(api_key, city)
+    temp = round(temp)
+
+    print(f"\nWeather in {city}: {temp}°C, {cond}")
+    weather_rec = dress_for_weather(temp, cond)
+
+    size_colors = color_suggestions_by_size(profile.size_category)
+    tone_colors = color_palette_for_undertone(profile.undertone)
+    print_tips = print_recommendations(profile.body_shape)
+    occasion_rec = dress_for_occasion(occasion)
+
+    print(f"\nSize: {profile.size_category}")
+    print(f"Body Shape: {profile.body_shape}")
+    print(f"Skin Undertone: {profile.undertone}")
+
+    print("\nColor by Body Size:")
+    for v in size_colors.values(): print(f"• {v}")
+
+    print("\nColor by Skin Tone:")
+    for v in tone_colors.values(): print(f"• {v}")
+
+    print("\nPrint Recommendations:")
+    for v in print_tips.values(): print(f"• {v}")
+
+    print("\nOccasion-Based Style:")
+    for v in occasion_rec.values(): print(f"• {v}")
+
+    print("\nWeather-Based Dressing:")
+    for v in weather_rec.values(): print(f"• {v}")
+
+    outfit = {
+        "Size": profile.size_category,
+        "Shape": profile.body_shape,
+        "Undertone": profile.undertone,
+        "Occasion": occasion,
+        "City": city,
+        "Temp (C)": temp,
+        "Weather": cond,
+        "SizeColors": '; '.join(size_colors.values()),
+        "ToneColors": '; '.join(tone_colors.values()),
+        "PrintTips": '; '.join(print_tips.values()),
+        "OccasionTips": '; '.join(occasion_rec.values()),
+        "WeatherTips": '; '.join(weather_rec.values())
+    }
+
+    save_outfit_to_csv("saved_outfits.csv", outfit)
+    print("\n✅ All styling recommendations saved to `saved_outfits.csv`.")
+
+if __name__ == "__main__":
+    run_interactive()
