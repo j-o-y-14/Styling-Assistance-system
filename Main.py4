@@ -121,29 +121,18 @@ def show_splash():
     splash.overrideredirect(True)
     splash.geometry("500x350+500+250")
     splash.configure(bg="#800080")
-    label = tk.Label(splash, text="Styling Assistant", font=("Segoe UI", 24, "bold"), fg="black", bg="#800080")
+    label = tk.Label(splash, text="Styling Assistant", font=("Segoe UI", 24, "bold"), fg="white", bg="#800080")
     label.pack(expand=True, pady=20)
-    desc = tk.Label(splash, text="Get personalized fashion tips based on your body and the weather!", font=("Segoe UI", 12), fg="black", bg="#800080")
+    desc = tk.Label(
+        splash,
+        text="Get personalized fashion tips based on your body and the weather!",
+        font=("Segoe UI", 16, "bold"),
+        fg="white",
+        bg="#800080"
+    )
     desc.pack(pady=10)
     splash.after(2500, splash.destroy)
     splash.mainloop()
-
-def show_profile_summary():
-    for widget in root.winfo_children():
-        widget.destroy()
-
-    frame = ttk.Frame(root, padding=20)
-    frame.pack(expand=True)
-
-    card = ttk.Labelframe(frame, text="Your Styling Profile Summary", padding=15, bootstyle="dark")
-    card.pack(fill='both', expand=True)
-
-    ttk.Label(card, text=f"Body Size: {LATEST_TIP.get('size', 'N/A')}", font=("Segoe UI", 12)).pack(pady=5)
-    ttk.Label(card, text=f"Body Shape: {LATEST_TIP.get('shape', 'N/A')}", font=("Segoe UI", 12)).pack(pady=5)
-    ttk.Label(card, text=f"Tip: {LATEST_TIP.get('tip', '')}", font=("Segoe UI", 10), wraplength=500).pack(pady=10)
-
-    ttk.Button(card, text="🎯 Get Further Advice", command=show_weather_or_occasion_step, bootstyle="success-outline").pack(pady=10)
-    ttk.Button(card, text="🔁 Start Over", command=show_step, bootstyle="secondary-outline").pack(pady=5)
 
 def show_step():
     for widget in root.winfo_children():
@@ -152,13 +141,13 @@ def show_step():
     frame = ttk.Frame(root, padding=20)
     frame.pack(expand=True)
 
-    # Header section with title and description
     header = ttk.Frame(frame)
     header.pack(pady=(0, 20))
     ttk.Label(header, text="👗 Welcome to Your Styling Assistant", font=("Helvetica", 18, "bold"), bootstyle="primary").pack()
-    ttk.Label(header, text="Enter your body measurements below to get tailored fashion tips.", font=("Segoe UI", 11), bootstyle="secondary").pack(pady=5)
+    ttk.Label(header, text="✨ Personalize Your Style with Confidence", font=("Segoe UI", 14, "bold"), foreground="white").pack(pady=5)
 
-    ttk.Label(frame, text="Step 1: Enter Your Measurements", font=("Helvetica", 16, "bold"), bootstyle="primary").pack(pady=10)
+    ttk.Separator(frame, orient="horizontal").pack(fill='x', pady=10)
+    ttk.Label(frame, text="📏 Step 1: Enter Your Measurements", font=("Helvetica", 16, "bold"), bootstyle="info").pack(pady=10)
 
     unit_var = tk.StringVar(value="in")
     unit_row = ttk.Frame(frame)
@@ -201,6 +190,23 @@ def show_step():
 
     ttk.Button(frame, text="✅ Continue", command=analyze, bootstyle="primary-outline").pack(pady=10)
 
+def show_profile_summary():
+    for widget in root.winfo_children():
+        widget.destroy()
+
+    frame = ttk.Frame(root, padding=20)
+    frame.pack(expand=True)
+
+    card = ttk.Labelframe(frame, text="Your Styling Profile Summary", padding=15, bootstyle="dark")
+    card.pack(fill='both', expand=True)
+
+    ttk.Label(card, text=f"Body Size: {LATEST_TIP.get('size', 'N/A')}", font=("Segoe UI", 16, "bold"), foreground="white").pack(pady=5)
+    ttk.Label(card, text=f"Body Shape: {LATEST_TIP.get('shape', 'N/A')}", font=("Segoe UI", 16, "bold"), foreground="white").pack(pady=5)
+    ttk.Label(card, text=f"Tip: {LATEST_TIP.get('tip', '')}", font=("Segoe UI", 14), foreground="white", wraplength=500).pack(pady=10)
+
+    ttk.Button(card, text="🎯 Get Further Advice", command=show_weather_or_occasion_step, bootstyle="success-outline").pack(pady=10)
+    ttk.Button(card, text="🔁 Start Over", command=show_step, bootstyle="secondary-outline").pack(pady=5)
+
 def show_weather_or_occasion_step():
     for widget in root.winfo_children():
         widget.destroy()
@@ -208,7 +214,7 @@ def show_weather_or_occasion_step():
     frame = ttk.Frame(root, padding=20)
     frame.pack(expand=True)
 
-    ttk.Label(frame, text="🌦️ Style Tips for Weather or Occasion", font=("Helvetica", 16, "bold"), bootstyle="info").pack(pady=10)
+    ttk.Label(frame, text="🌦️ Styling Recommendations According to Weather and Occasion", font=("Helvetica", 16, "bold"), bootstyle="info").pack(pady=10)
 
     row = ttk.Frame(frame)
     row.pack(pady=10, fill='x')
@@ -224,7 +230,13 @@ def show_weather_or_occasion_step():
     occasion_entry = ttk.Combobox(row2, textvariable=occasion_var, values=["Black-tie", "Cocktail", "Dressy Casual", "Casual"])
     occasion_entry.pack(side='left', expand=True, fill='x')
 
-    output = ScrolledText(frame, height=6, font=("Segoe UI", 10))
+    undertone_var = tk.StringVar()
+    ttk.Label(frame, text="Skin Undertone (Warm / Cool / Neutral):").pack(pady=(10, 0))
+    undertone_entry = ttk.Entry(frame, textvariable=undertone_var)
+    undertone_entry.pack(fill='x', padx=20, pady=5)
+    ToolTip(undertone_entry, text="Enter your undertone (e.g., Warm, Cool, Neutral)")
+
+    output = ScrolledText(frame, height=8, font=("Segoe UI", 12), background="#2c2f33", foreground="white", insertbackground="white", borderwidth=2, relief="groove")
     output.pack(pady=10, fill='both', expand=True)
 
     def get_advice():
@@ -232,21 +244,23 @@ def show_weather_or_occasion_step():
         temp, cond = fetch_weather(DEFAULT_API_KEY, city)
         if temp is not None:
             output.insert('end', f"Weather in {city}: {temp}°C, {cond}\n")
-            output.insert('end', f"Dress Tip: {dress_for_weather(temp, cond)}\n\n")
+            output.insert('end', f"Styling Recommendation According to Weather: {dress_for_weather(temp, cond)}\n\n")
         else:
             output.insert('end', f"Could not fetch weather for {city}.\n")
         occ = occasion_entry.get()
-        output.insert('end', f"Occasion Tip: {dress_for_occasion(occ)}\n")
+        output.insert('end', f"Styling Recommendation According to Occasion: {dress_for_occasion(occ)}\n")
+        undertone = undertone_var.get().strip().capitalize()
+        color_tip = color_palette_for_undertone(undertone)
+        output.insert('end', f"Recommendation of outfit colour according to undertone: {color_tip}\n")
 
     ttk.Button(frame, text="🎨 Get Advice", command=get_advice, bootstyle="success").pack(pady=10)
     ttk.Button(frame, text="💾 Save Tips", command=lambda: save_outfit_to_csv({"City": city_entry.get(), "Occasion": occasion_entry.get(), "Tips": output.get("1.0", "end").strip()})).pack()
     ttk.Button(frame, text="⬅️ Back", command=show_profile_summary, bootstyle="secondary-outline").pack(pady=5)
     ttk.Button(frame, text="🔁 Start Over", command=show_step, bootstyle="warning-outline").pack(pady=5)
 
-# Run app
 if __name__ == '__main__':
     show_splash()
-    root = ttk.Window(themename="morph")
+    root = ttk.Window(themename="cyborg")
     root.title("Styling Assistant")
     root.geometry("700x600")
     show_step()

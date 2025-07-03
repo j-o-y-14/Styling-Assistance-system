@@ -2,6 +2,7 @@ import streamlit as st
 from dataclasses import dataclass
 import requests
 import openai
+import os
 
 DEFAULT_API_KEY = "4e441abf6085898180f8f8baf17f74f6"
 OPENAI_API_KEY = "your-openai-api-key"
@@ -108,7 +109,10 @@ st.title("👗 Welcome to Your Styling Assistant")
 st.subheader("✨ Personalize Your Style with Confidence")
 st.write("Enter your body measurements to get personalized fashion advice!")
 
-st.image("body_shapes.png", caption="Body Shape Types", use_container_width=True)
+if os.path.exists("body_shapes.png"):
+    st.image("body_shapes.png", caption="Body Shape Types", use_container_width=True)
+else:
+    st.warning("Image 'body_shapes.png' not found.")
 
 st.markdown("---")
 
@@ -139,7 +143,12 @@ if submitted:
     st.success(f"Body Size: {size}\n\nBody Shape: {shape}")
     st.info(f"💡 Style Tip: {tip}")
 
-    st.image("outfit_ideas.png", caption="Outfit Ideas for Your Shape", use_container_width=True)
+    outfit_text = f"""Outfit Suggestion:\nBody Size: {size}\nBody Shape: {shape}\n\nStyle Tip: {tip}"""
+
+    if os.path.exists("outfit_ideas.png"):
+        st.image("outfit_ideas.png", caption="Outfit Ideas for Your Shape", use_container_width=True)
+    else:
+        st.warning("Image 'outfit_ideas.png' not found.")
 
     st.markdown("---")
     with st.expander("🌦️ Get Advice for Weather and Occasion"):
@@ -153,9 +162,17 @@ if submitted:
                 st.write(f"🌟 Occasion Tip: {dress_for_occasion(occasion)}")
                 suggestion = generate_outfit_suggestion(size, shape, occasion, cond, temp)
                 st.markdown(f"🧐 **AI Suggestion:** {suggestion}")
+
+                # Combine everything for download
+                outfit_text += f"\n\nOccasion: {occasion}\nWeather: {cond}, {temp}°C\n\nSuggested Outfit:\n{suggestion}"
+
+                # Download Button
+                st.download_button(
+                    label="📅 Download My Outfit Suggestion",
+                    data=outfit_text,
+                    file_name="my_outfit_suggestion.txt",
+                    mime="text/plain"
+                )
             else:
                 st.error("❌ Could not fetch weather. Check city name.")
-
-    st.markdown("---")
-    st.download_button("📅 Download My Tips", data=f"Body Size: {size}\nBody Shape: {shape}\n\nTip: {tip}", file_name="styling_tips.txt")
 

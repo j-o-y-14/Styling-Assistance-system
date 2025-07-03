@@ -1,6 +1,6 @@
 ## STYLING ASSISTANT SYSTEM
 
----
+streamlit run Main.py
 
 ## Purpose / Problem Solved  
 This system empowers users to express their personal style confidently while reducing decision fatigue, financial waste, wardrobe clutter and authenticity gap.
